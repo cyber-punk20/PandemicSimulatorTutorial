@@ -28,6 +28,8 @@ class BasePerson(Person):
 
     _regulation_compliance_prob: float
     _go_home: bool
+    
+    _is_vaccinated: bool
 
     def __init__(self,
                  person_id: PersonID,
@@ -58,6 +60,7 @@ class BasePerson(Person):
         self._cemetery_ids = list(self._registry.location_ids_of_type(Cemetery))
         self._hospital_ids = list(self._registry.location_ids_of_type(Hospital))
         self._go_home = False
+        self._is_vaccinated = False
 
     def enter_location(self, location_id: LocationID) -> bool:
         if location_id == self._home:

@@ -100,7 +100,7 @@ class BasePerson(Person):
         self._state.infection_state = dataclasses.replace(self._state.infection_state, **inf_state_dict)
 
     def _calculate_effective(self, mutation: float, sim_time: SimTime):
-        raw_effective = (1 - mutation) * 90 / (sim_time.day - self._state._vaccination_time + 0.00001) * 0.9
+        raw_effective = (1 - mutation) * 90 / (sim_time.day - self._state._vaccination_time + 0.01) * 0.9
         return 1 / (1 + np.exp(-raw_effective))
 
     def step(self, sim_time: SimTime, mutation: float, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:

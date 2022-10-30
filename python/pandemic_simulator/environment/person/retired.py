@@ -48,8 +48,8 @@ class Retired(BasePerson):
                 self._routines.append(routine)
                 self._routines_with_status.append(PersonRoutineWithStatus(routine))
 
-    def step(self, sim_time: SimTime, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
-        step_ret = super().step(sim_time, contact_tracer)
+    def step(self, sim_time: SimTime, mutation: float, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
+        step_ret = super().step(sim_time, mutation, contact_tracer)
         if step_ret != NOOP:
             return step_ret
 

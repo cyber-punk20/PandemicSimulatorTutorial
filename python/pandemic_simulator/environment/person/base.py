@@ -29,8 +29,6 @@ class BasePerson(Person):
     _regulation_compliance_prob: float
     _go_home: bool
     
-    _is_vaccinated: bool
-
     def __init__(self,
                  person_id: PersonID,
                  home: LocationID,
@@ -60,7 +58,7 @@ class BasePerson(Person):
         self._cemetery_ids = list(self._registry.location_ids_of_type(Cemetery))
         self._hospital_ids = list(self._registry.location_ids_of_type(Hospital))
         self._go_home = False
-        self._is_vaccinated = False
+        
 
     def enter_location(self, location_id: LocationID) -> bool:
         if location_id == self._home:
@@ -95,15 +93,23 @@ class BasePerson(Person):
         if (self._state.current_location not in self.assigned_locations and
                 self._registry.is_location_open_for_visitors(self._state.current_location, sim_time)):
             self._go_home = True
-
+        
     def _set_is_hospitalized(self, value: bool) -> None:
         inf_state_dict = dataclasses.asdict(self._state.infection_state)
         inf_state_dict['is_hospitalized'] = value
         self._state.infection_state = dataclasses.replace(self._state.infection_state, **inf_state_dict)
 
-    def step(self, sim_time: SimTime, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
+    def _calculate_effective(self, mutation: float, sim_time: SimTime):
+        raw_effective = (1 - mutation) * 90 / (sim_time.day - self._state._vaccination_time + 0.00001) * 0.9
+        return 1 / (1 + np.exp(-raw_effective))
+
+    def step(self, sim_time: SimTime, mutation: float, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
         # sync sim time specific variables
         self._sync(sim_time)
+        if self._state._is_vaccinated:
+            self._state._vaccination_effective = self._calculate_effective(mutation, sim_time)
+            if self._state._vaccination_effective <= 0.2:
+                self._state._is_vaccinated = False
         self._registry.clear_quarantined(self._id)
 
         # the base person's policy includes whether to go to a hospital or a be transferred to a cemetery.

@@ -35,17 +35,22 @@ class PersonState:
     not_infection_probability: float = field(default=1., init=False)
     not_infection_probability_history: List[Tuple[LocationID, float]] = field(default_factory=list, init=False)
 
+    # Vaccination Related
+    _is_vaccinated: bool = field(init=False, default=False) # if _vaccination_effective is smaller than a given threshold, set it to be false
+    _vaccination_time: int = field(init=False, default=-1)
+    _vaccination_effective: float = field(init=False, default=0)
 
 class Person(ABC):
     """Class that implements a sim person automaton with a pre-defined policy."""
 
     @abstractmethod
-    def step(self, sim_time: SimTime, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
+    def step(self, sim_time: SimTime, mutation: float, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
         """
         Method that steps through the person's policy. The step can return a
         NoOp to indicate no operation was carried out.
 
         :param sim_time: Current simulation time.
+        :param mutation: Current mutation of virus
         :param contact_tracer: Traces of previous contacts of the person.
         :return: Return NoOp if no operation was carried out otherwise None.
         """

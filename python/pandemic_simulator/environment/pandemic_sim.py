@@ -48,6 +48,13 @@ class PandemicSim:
     _persons: Sequence[Person]
     _state: PandemicSimState
 
+    # Vaccination Related
+    _coverage: float # [0, 1] percentage of population that is fully vaccinated
+    _mutation: float # the percentage that the virus is mutated
+    _research_days: int # the number of days spent on vaccine research
+    _vaccine_prod : int # the number of vaccine dose produced per time step
+    
+
     def __init__(self,
                  locations: Sequence[Location],
                  persons: Sequence[Person],
@@ -57,7 +64,9 @@ class PandemicSim:
                  new_time_slot_interval: SimTimeInterval = SimTimeInterval(day=1),
                  infection_update_interval: SimTimeInterval = SimTimeInterval(day=1),
                  person_routine_assignment: Optional[PersonRoutineAssignment] = None,
-                 infection_threshold: int = 0):
+                 infection_threshold: int = 0,
+                 research_days: int = 100,
+                 vaccine_prod: int = 1000):
         """
         :param locations: A sequence of Location instances.
         :param persons: A sequence of Person instances.
@@ -86,6 +95,12 @@ class PandemicSim:
         self._new_time_slot_interval = new_time_slot_interval
         self._infection_update_interval = infection_update_interval
         self._infection_threshold = infection_threshold
+
+        # Vaccination Related 
+        self._coverage = 0 
+        self._mutation = 0
+        self._research_days = research_days
+        self._vaccine_prod = vaccine_prod
 
         self._type_to_locations = defaultdict(list)
         for loc in locations:
@@ -151,6 +166,8 @@ class PandemicSim:
         contact_tracer = MaxSlotContactTracer(
             storage_slots=sim_opts.contact_tracer_history_size) if sim_opts.use_contact_tracer else None
 
+        
+
         # setup sim
         return PandemicSim(persons=persons,
                            locations=locations,
@@ -158,7 +175,10 @@ class PandemicSim:
                            pandemic_testing=pandemic_testing,
                            contact_tracer=contact_tracer,
                            infection_threshold=sim_opts.infection_threshold,
-                           person_routine_assignment=sim_config.person_routine_assignment)
+                           person_routine_assignment=sim_config.person_routine_assignment,
+                           # Vaccination Related
+                           research_days=sim_opts.research_days,
+                           vaccine_prod=sim_opts.vaccine_prod)
 
     @property
     def registry(self) -> Registry:
@@ -220,14 +240,20 @@ class PandemicSim:
             ):
                 continue
             elif person1_inf_state is not None and person1_inf_state.summary in infectious_states:
+                #CHECKME: boundary of probability
                 spread_probability = (person1_inf_state.spread_probability *
-                                      person1_state.infection_spread_multiplier)
+                                      person1_state.infection_spread_multiplier *
+                                      (1 - person2_state._vaccination_effective) *
+                                      (1 - self._coverage))
                 person2_state.not_infection_probability *= 1 - spread_probability
                 person2_state.not_infection_probability_history.append((person2_state.current_location,
                                                                         person2_state.not_infection_probability))
+
             elif person2_inf_state is not None and person2_inf_state.summary in infectious_states:
                 spread_probability = (person2_inf_state.spread_probability *
-                                      person2_state.infection_spread_multiplier)
+                                      person2_state.infection_spread_multiplier *
+                                      (1 - person1_state._vaccination_effective) *
+                                      (1 - self._coverage))
                 person1_state.not_infection_probability *= 1 - spread_probability
                 person1_state.not_infection_probability_history.append((person1_state.current_location,
                                                                         person1_state.not_infection_probability))
@@ -261,6 +287,18 @@ class PandemicSim:
             self._state.global_testing_state.summary[prv] -= 1
             self._state.global_testing_state.num_tests += 1  # update number of tests
 
+    def _assign_vaccine(self):
+        #TODO
+        vaccination_assignment = []
+        for i in self._numpy_rng.randint(0, len(self._persons), self._vaccine_prod):
+            vaccination_assignment.append(i)
+        for i in vaccination_assignment:
+            if not self._persons[i].state._is_vaccinated:
+                self._persons[i].state._is_vaccinated = True
+                self._persons[i].state._vaccination_time = self._state.sim_time.day
+                self._coverage += 1 / len(self._persons)
+                
+
     def step(self) -> None:
         """Method that advances one step through the simulator"""
         # sync all locations
@@ -268,9 +306,19 @@ class PandemicSim:
             location.sync(self._state.sim_time)
         self._registry.update_location_specific_information()
 
+        for person in self._persons:
+            if person.state._vaccination_effective <= 0.2:
+                person.state._is_vaccinated = False
+                self._coverage -= 1 / len(self._persons)
+
+        if self._state.sim_time.day >= self._research_days:
+            self._assign_vaccine()
+
+
+
         # call person steps (randomize order)
         for i in self._numpy_rng.randint(0, len(self._persons), len(self._persons)):
-            self._persons[i].step(self._state.sim_time, self._contact_tracer)
+            self._persons[i].step(self._state.sim_time, self._mutation, self._contact_tracer)
 
         # update person contacts
         for location in self._id_to_location.values():
@@ -321,6 +369,9 @@ class PandemicSim:
 
         # call sim time step
         self._state.sim_time.step()
+        # Vaccination Related
+        if(self._numpy_rng.uniform(0, 1) > 0.98):
+            self._mutation += self._numpy_rng.uniform(0, 0.1)
 
     def step_day(self, hours_in_a_day: int = 24) -> None:
         for _ in range(hours_in_a_day):

@@ -311,7 +311,7 @@ class PandemicSim:
                 person.state._is_vaccinated = False
                 self._coverage -= 1 / len(self._persons)
 
-        if self._state.sim_time.day >= self._research_days:
+        if self._state.sim_time.day >= self._research_days and self._state.sim_time.hour == 10:
             self._assign_vaccine()
 
 
@@ -370,8 +370,10 @@ class PandemicSim:
         # call sim time step
         self._state.sim_time.step()
         # Vaccination Related
-        if(self._numpy_rng.uniform(0, 1) > 0.98):
-            self._mutation += self._numpy_rng.uniform(0, 0.1)
+        if self._state.sim_time.day >= self._research_days and self._numpy_rng.uniform(0, 1) > 0.999:
+            self._mutation += self._numpy_rng.uniform(0, 0.05)
+            self._mutation = 0.99 if self._mutation >= 1 else self._mutation
+            print(self._mutation)
 
     def step_day(self, hours_in_a_day: int = 24) -> None:
         for _ in range(hours_in_a_day):

@@ -103,6 +103,7 @@ class BasePerson(Person):
         raw_effective = (1 - mutation) * 90 / (sim_time.day - self._state._vaccination_time + 0.01) * 0.9
         return 1 / (1 + np.exp(-raw_effective))
 
+
     def step(self, sim_time: SimTime, mutation: float, contact_tracer: Optional[ContactTracer] = None) -> Optional[NoOP]:
         # sync sim time specific variables
         self._sync(sim_time)

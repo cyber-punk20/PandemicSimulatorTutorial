@@ -13,7 +13,7 @@ def run_pandemic_sim() -> None:
     ps.init_globals(seed=1)
 
     # select a simulator config
-    sim_config = ps.sh.small_town_config
+    sim_config = ps.sh.medium_town_config
 
     # make sim
     sim = ps.env.PandemicSim.from_config(sim_config)
@@ -25,7 +25,7 @@ def run_pandemic_sim() -> None:
     sim.impose_regulation(regulation=ps.sh.austin_regulations[0])  # stage 0
 
     # run regulation steps in the simulator
-    for _ in trange(300, desc='Simulating day'):
+    for _ in trange(100, desc='Simulating day'):
         sim.step_day()
         viz.record(sim.state)
 

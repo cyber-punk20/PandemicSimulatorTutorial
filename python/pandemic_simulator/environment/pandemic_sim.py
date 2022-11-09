@@ -241,6 +241,8 @@ class PandemicSim:
                 continue
             elif person1_inf_state is not None and person1_inf_state.summary in infectious_states:
                 #CHECKME: boundary of probability
+                assert(person2_state._vaccination_effective <= 1 and person2_state._vaccination_effective >= 0)
+                assert(self._coverage <= 1 and self._coverage >= 0)
                 spread_probability = (person1_inf_state.spread_probability *
                                       person1_state.infection_spread_multiplier *
                                       (1 - person2_state._vaccination_effective) *
@@ -250,6 +252,8 @@ class PandemicSim:
                                                                         person2_state.not_infection_probability))
 
             elif person2_inf_state is not None and person2_inf_state.summary in infectious_states:
+                assert(person1_state._vaccination_effective <= 1 and person1_state._vaccination_effective >= 0)
+                assert(self._coverage <= 1  and self._coverage >= 0)
                 spread_probability = (person2_inf_state.spread_probability *
                                       person2_state.infection_spread_multiplier *
                                       (1 - person1_state._vaccination_effective) *
@@ -307,7 +311,7 @@ class PandemicSim:
         self._registry.update_location_specific_information()
 
         for person in self._persons:
-            if person.state._vaccination_effective <= 0.2:
+            if person.state._vaccination_effective <= 0.2 and person.state._is_vaccinated:
                 person.state._is_vaccinated = False
                 self._coverage -= 1 / len(self._persons)
 

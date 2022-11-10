@@ -44,9 +44,9 @@ class PandemicSimOpts:
     infection_threshold: int = 10
     """A threshold used by """
 
-    research_days: int = 25
+    research_days: int = 3
     """Time needed to create vaccination"""
 
-    vaccine_prod: int = 25
+    vaccine_prod: int = 75
 
     
